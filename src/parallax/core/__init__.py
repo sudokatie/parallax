@@ -8,6 +8,7 @@ from parallax.core.config import (
     load_config,
     merge_cli_args,
 )
+from parallax.core.engine import AnalysisEngine, EngineError
 from parallax.core.types import AnalysisResult, Annotation, Location, Severity
 
 __all__ = [
@@ -21,4 +22,6 @@ __all__ = [
     "load_config",
     "find_config_file",
     "merge_cli_args",
+    "AnalysisEngine",
+    "EngineError",
 ]
