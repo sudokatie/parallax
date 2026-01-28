@@ -78,6 +78,9 @@ class MaintainabilityLens(Lens):
             annotations.extend(self._check_deep_nesting(path, ast, context))
             annotations.extend(self._check_dead_code(path, ast, context))
 
+        # Check for duplicate code across all files
+        annotations.extend(self._check_duplicate_code(context))
+
         return annotations
 
     def _check_complexity(
@@ -429,3 +432,76 @@ class MaintainabilityLens(Lens):
                 pass
 
         return dead_lines
+
+    def _check_duplicate_code(self, context: AnalysisContext) -> list[Annotation]:
+        """Check for duplicate code blocks across files.
+
+        Detects functions with identical or near-identical bodies.
+        """
+        annotations = []
+
+        # Collect all functions with their normalized bodies
+        function_bodies: list[tuple[str, str, int, str, int]] = []  # (path, name, line, body_hash, body_lines)
+
+        for path, ast in context.files.items():
+            if not path.endswith((".py", ".pyi")):
+                continue
+
+            functions = find_function_definitions(ast)
+            for func in functions:
+                line = func.start_point[0] + 1
+
+                # Only check changed functions
+                if not context.is_line_changed(path, line):
+                    continue
+
+                func_name = get_function_name(func, ast) or "<anonymous>"
+
+                # Get function body
+                body = func.child_by_field_name("body")
+                if body is None:
+                    continue
+
+                # Normalize body text (remove whitespace, comments for comparison)
+                body_text = ast.text_at(body).strip()
+                # Simple normalization: collapse whitespace
+                normalized = " ".join(body_text.split())
+                body_lines = body.end_point[0] - body.start_point[0] + 1
+
+                # Skip very short functions (less than 5 lines)
+                if body_lines < 5:
+                    continue
+
+                function_bodies.append((path, func_name, line, normalized, body_lines))
+
+        # Find duplicates
+        seen: dict[str, tuple[str, str, int]] = {}  # body_hash -> (path, name, line)
+
+        for path, name, line, body_hash, body_lines in function_bodies:
+            if body_hash in seen:
+                orig_path, orig_name, orig_line = seen[body_hash]
+
+                # Don't report if same function (e.g., method override pattern)
+                if name == orig_name:
+                    continue
+
+                annotations.append(
+                    Annotation(
+                        lens="maintainability",
+                        rule="duplicate_code",
+                        location=Location(
+                            file=path,
+                            start_line=line,
+                            end_line=line + body_lines - 1,
+                        ),
+                        severity=Severity.LOW,
+                        confidence=0.7,
+                        message=f"Function '{name}' has identical body to '{orig_name}' in {orig_path}:{orig_line}",
+                        suggestion="Extract common logic into a shared function to reduce duplication",
+                        category="duplication",
+                    )
+                )
+            else:
+                seen[body_hash] = (path, name, line)
+
+        return annotations

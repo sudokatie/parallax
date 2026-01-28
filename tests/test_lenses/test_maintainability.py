@@ -338,6 +338,69 @@ class TestDeepNesting:
         assert len([a for a in annotations if a.rule == "deep_nesting"]) == 1
 
 
+class TestDuplicateCode:
+    """Tests for duplicate code detection."""
+
+    def test_detect_duplicate_functions(self, lens: MaintainabilityLens) -> None:
+        """Test detecting duplicate function bodies."""
+        source = """def function_a():
+    x = 1
+    y = 2
+    z = 3
+    result = x + y + z
+    return result
+
+def function_b():
+    x = 1
+    y = 2
+    z = 3
+    result = x + y + z
+    return result
+"""
+        context = make_context(source)
+        annotations = lens.analyze(context)
+
+        dup_findings = [a for a in annotations if a.rule == "duplicate_code"]
+        assert len(dup_findings) == 1
+        assert "function_b" in dup_findings[0].message or "function_a" in dup_findings[0].message
+
+    def test_no_flag_short_functions(self, lens: MaintainabilityLens) -> None:
+        """Test that short functions are not flagged as duplicates."""
+        source = """def short_a():
+    return 1
+
+def short_b():
+    return 1
+"""
+        context = make_context(source)
+        annotations = lens.analyze(context)
+
+        dup_findings = [a for a in annotations if a.rule == "duplicate_code"]
+        assert len(dup_findings) == 0
+
+    def test_no_flag_different_bodies(self, lens: MaintainabilityLens) -> None:
+        """Test that different function bodies are not flagged."""
+        source = """def func_a():
+    x = 1
+    y = 2
+    z = 3
+    result = x + y + z
+    return result
+
+def func_b():
+    a = 10
+    b = 20
+    c = 30
+    total = a * b * c
+    return total
+"""
+        context = make_context(source)
+        annotations = lens.analyze(context)
+
+        dup_findings = [a for a in annotations if a.rule == "duplicate_code"]
+        assert len(dup_findings) == 0
+
+
 class TestDeadCode:
     """Tests for dead code detection."""
 
