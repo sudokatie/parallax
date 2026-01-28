@@ -76,6 +76,7 @@ class MaintainabilityLens(Lens):
             annotations.extend(self._check_parameter_count(path, ast, context))
             annotations.extend(self._check_magic_numbers(path, ast, context))
             annotations.extend(self._check_deep_nesting(path, ast, context))
+            annotations.extend(self._check_dead_code(path, ast, context))
 
         return annotations
 
@@ -355,3 +356,76 @@ class MaintainabilityLens(Lens):
 
         traverse(node, 0)
         return max_depth, deepest_line
+
+    def _check_dead_code(
+        self, path: str, ast, context: AnalysisContext
+    ) -> list[Annotation]:
+        """Check for unreachable code paths."""
+        annotations = []
+
+        functions = find_function_definitions(ast)
+        for func in functions:
+            func_start_line = func.start_point[0] + 1
+
+            if not context.is_line_changed(path, func_start_line):
+                continue
+
+            func_name = get_function_name(func, ast) or "<anonymous>"
+
+            # Find the function body
+            body = func.child_by_field_name("body")
+            if body is None:
+                continue
+
+            # Check for code after return/raise statements
+            dead_lines = self._find_dead_code_after_exit(body, ast)
+
+            for dead_line in dead_lines:
+                if context.is_line_changed(path, dead_line):
+                    annotations.append(
+                        Annotation(
+                            lens="maintainability",
+                            rule="dead_code",
+                            location=Location(
+                                file=path,
+                                start_line=dead_line,
+                                end_line=dead_line,
+                            ),
+                            severity=Severity.LOW,
+                            confidence=0.8,
+                            message=f"Unreachable code in '{func_name}' after return/raise statement",
+                            suggestion="Remove dead code or restructure control flow",
+                            category="dead-code",
+                        )
+                    )
+
+        return annotations
+
+    def _find_dead_code_after_exit(self, body, ast) -> list[int]:
+        """Find lines of code that come after return/raise in the same block.
+
+        Args:
+            body: Function body AST node.
+            ast: FileAST for text extraction.
+
+        Returns:
+            List of line numbers with unreachable code.
+        """
+        dead_lines = []
+
+        # Get direct children (statements in function body)
+        statements = [child for child in body.children if child.type not in ("comment", "NEWLINE", "INDENT", "DEDENT")]
+
+        found_exit = False
+        for stmt in statements:
+            if found_exit:
+                # This code is after a return/raise
+                dead_lines.append(stmt.start_point[0] + 1)
+            elif stmt.type in ("return_statement", "raise_statement"):
+                found_exit = True
+            elif stmt.type == "if_statement":
+                # Check if all branches return/raise (then code after is dead)
+                # This is complex, so we only check simple cases
+                pass
+
+        return dead_lines

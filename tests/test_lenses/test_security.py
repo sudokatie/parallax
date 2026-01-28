@@ -388,6 +388,74 @@ class TestWeakCrypto:
         assert len(crypto_annotations) == 0
 
 
+class TestMissingAuth:
+    """Tests for missing authentication detection."""
+
+    def test_detect_flask_route_no_auth(self):
+        """Test detecting Flask route without auth decorator."""
+        source = '''from flask import Flask
+app = Flask(__name__)
+
+@app.route("/users")
+def get_users():
+    return "users"
+'''
+        context = create_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        auth_annotations = [a for a in annotations if a.rule == "missing_auth"]
+        assert len(auth_annotations) == 1
+        assert "get_users" in auth_annotations[0].message
+
+    def test_no_flag_with_login_required(self):
+        """Test that routes with login_required are not flagged."""
+        source = '''from flask import Flask
+from flask_login import login_required
+app = Flask(__name__)
+
+@app.route("/users")
+@login_required
+def get_users():
+    return "users"
+'''
+        context = create_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        auth_annotations = [a for a in annotations if a.rule == "missing_auth"]
+        assert len(auth_annotations) == 0
+
+    def test_detect_fastapi_no_auth(self):
+        """Test detecting FastAPI endpoint without auth."""
+        source = '''from fastapi import FastAPI
+app = FastAPI()
+
+@app.get("/items")
+def read_items():
+    return []
+'''
+        context = create_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        auth_annotations = [a for a in annotations if a.rule == "missing_auth"]
+        assert len(auth_annotations) == 1
+
+    def test_no_flag_non_route_decorator(self):
+        """Test that non-route decorators are not flagged."""
+        source = '''@property
+def get_value(self):
+    return self._value
+'''
+        context = create_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        auth_annotations = [a for a in annotations if a.rule == "missing_auth"]
+        assert len(auth_annotations) == 0
+
+
 class TestAnnotationDetails:
     """Tests for annotation details."""
 

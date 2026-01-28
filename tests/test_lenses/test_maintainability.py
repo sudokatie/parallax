@@ -338,6 +338,62 @@ class TestDeepNesting:
         assert len([a for a in annotations if a.rule == "deep_nesting"]) == 1
 
 
+class TestDeadCode:
+    """Tests for dead code detection."""
+
+    def test_detect_code_after_return(self, lens: MaintainabilityLens) -> None:
+        """Test detecting code after return statement."""
+        source = """def func():
+    return 42
+    x = 1  # Dead code
+    print(x)  # Also dead
+"""
+        context = make_context(source)
+        annotations = lens.analyze(context)
+
+        dead_findings = [a for a in annotations if a.rule == "dead_code"]
+        assert len(dead_findings) >= 1
+        assert dead_findings[0].message.startswith("Unreachable code")
+
+    def test_detect_code_after_raise(self, lens: MaintainabilityLens) -> None:
+        """Test detecting code after raise statement."""
+        source = """def func():
+    raise ValueError("error")
+    cleanup()  # Dead code
+"""
+        context = make_context(source)
+        annotations = lens.analyze(context)
+
+        dead_findings = [a for a in annotations if a.rule == "dead_code"]
+        assert len(dead_findings) >= 1
+
+    def test_no_flag_code_before_return(self, lens: MaintainabilityLens) -> None:
+        """Test that code before return is not flagged."""
+        source = """def func():
+    x = 1
+    y = 2
+    return x + y
+"""
+        context = make_context(source)
+        annotations = lens.analyze(context)
+
+        dead_findings = [a for a in annotations if a.rule == "dead_code"]
+        assert len(dead_findings) == 0
+
+    def test_no_flag_conditional_return(self, lens: MaintainabilityLens) -> None:
+        """Test that code after conditional return is not flagged."""
+        source = """def func(condition):
+    if condition:
+        return 1
+    return 2  # Not dead - only reached if condition is false
+"""
+        context = make_context(source)
+        annotations = lens.analyze(context)
+
+        dead_findings = [a for a in annotations if a.rule == "dead_code"]
+        assert len(dead_findings) == 0
+
+
 class TestConfiguration:
     """Tests for lens configuration."""
 

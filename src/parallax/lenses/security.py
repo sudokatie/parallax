@@ -59,6 +59,7 @@ class SecurityLens(Lens):
             annotations.extend(self._check_xss(path, ast, context))
             annotations.extend(self._check_path_traversal(path, ast, context))
             annotations.extend(self._check_weak_crypto(path, ast, context))
+            annotations.extend(self._check_missing_auth(path, ast, context))
 
         return annotations
 
@@ -549,5 +550,115 @@ class SecurityLens(Lens):
                             category="crypto",
                         )
                     )
+
+        return annotations
+
+    def _check_missing_auth(
+        self, path: str, ast, context: AnalysisContext
+    ) -> list[Annotation]:
+        """Check for endpoints without authentication checks.
+
+        Detects Flask/Django/FastAPI route handlers that don't have
+        authentication decorators or checks.
+        """
+        annotations = []
+
+        # Common auth decorator names
+        auth_decorators = {
+            "login_required",
+            "authenticated",
+            "auth_required",
+            "requires_auth",
+            "jwt_required",
+            "token_required",
+            "api_key_required",
+            "permission_required",
+            "permissions_required",
+            "isauthenticated",
+            "isadminuser",
+            "allowany",  # Explicit "no auth" is intentional
+        }
+
+        # Route decorator patterns (Flask, FastAPI, Django)
+        route_decorators = {
+            "route",
+            "get",
+            "post",
+            "put",
+            "patch",
+            "delete",
+            "api_view",
+            "action",
+        }
+
+        # Find all decorated functions
+        functions = ast.find_nodes_by_type("decorated_definition")
+
+        for func_def in functions:
+            line = func_def.start_point[0] + 1
+
+            if not context.is_line_changed(path, line):
+                continue
+
+            # Get all decorators
+            decorators = []
+            for child in func_def.children:
+                if child.type == "decorator":
+                    dec_text = ast.text_at(child).lower()
+                    decorators.append(dec_text)
+
+            # Check if this is a route handler
+            is_route = False
+            for dec in decorators:
+                for route_pattern in route_decorators:
+                    if route_pattern in dec:
+                        is_route = True
+                        break
+                if is_route:
+                    break
+
+            if not is_route:
+                continue
+
+            # Check if it has auth decorator
+            has_auth = False
+            for dec in decorators:
+                for auth_pattern in auth_decorators:
+                    if auth_pattern in dec:
+                        has_auth = True
+                        break
+                if has_auth:
+                    break
+
+            if not has_auth:
+                # Get function name
+                func_node = None
+                for child in func_def.children:
+                    if child.type == "function_definition":
+                        func_node = child
+                        break
+
+                func_name = "<unknown>"
+                if func_node:
+                    name_node = func_node.child_by_field_name("name")
+                    if name_node:
+                        func_name = ast.text_at(name_node)
+
+                annotations.append(
+                    Annotation(
+                        lens="security",
+                        rule="missing_auth",
+                        location=Location(
+                            file=path,
+                            start_line=line,
+                            end_line=func_def.end_point[0] + 1,
+                        ),
+                        severity=Severity.MEDIUM,
+                        confidence=0.6,
+                        message=f"Route handler '{func_name}' has no authentication decorator",
+                        suggestion="Add @login_required, @jwt_required, or similar authentication decorator",
+                        category="auth",
+                    )
+                )
 
         return annotations

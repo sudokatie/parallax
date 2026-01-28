@@ -21,6 +21,18 @@ class AnalysisContext:
     files: dict[str, FileAST]
     config: LensConfig
 
+    @property
+    def hunks(self):
+        """Get all hunks from all files in the diff.
+
+        Returns:
+            List of all DiffHunk objects across all files.
+        """
+        all_hunks = []
+        for file_diff in self.diff.files:
+            all_hunks.extend(file_diff.hunks)
+        return all_hunks
+
     def is_line_changed(self, path: str, line: int) -> bool:
         """Check if a line is in the diff (added/modified).
 
