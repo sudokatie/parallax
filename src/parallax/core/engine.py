@@ -1,10 +1,14 @@
 """Analysis engine for Parallax."""
 
-import os
 import subprocess
 from pathlib import Path
 
-from parallax.core.config import Config, LensConfig
+from parallax.core.config import Config
+from parallax.core.suppression import (
+    Suppression,
+    SuppressionChecker,
+    parse_file_suppressions,
+)
 from parallax.core.types import AnalysisResult, Annotation
 from parallax.diff.parser import ParseError, parse_diff, parse_diff_file
 from parallax.diff.types import ParsedDiff
@@ -39,6 +43,7 @@ class AnalysisEngine:
         self.verbose = verbose
         self.quiet = quiet
         self._python_analyzer = PythonAnalyzer()
+        self._suppressions: dict[str, list[Suppression]] = {}
 
     def analyze(self, target: str) -> AnalysisResult:
         """Analyze a target (diff file or directory).
@@ -106,8 +111,11 @@ class AnalysisEngine:
                     if a.severity >= lens_config.severity_threshold
                 ]
 
-                # Filter by ignore patterns
+                # Filter by ignore patterns (config-based)
                 lens_annotations = self._apply_ignore_rules(lens_annotations)
+
+                # Filter by inline suppressions
+                lens_annotations = self._apply_suppressions(lens_annotations)
 
                 annotations.extend(lens_annotations)
 
@@ -226,6 +234,15 @@ class AnalysisEngine:
             try:
                 ast = self._python_analyzer.parse_file(str(full_path))
                 files[path] = ast
+
+                # Parse inline suppressions from source
+                source = full_path.read_text()
+                suppressions = parse_file_suppressions(source)
+                if suppressions:
+                    self._suppressions[path] = suppressions
+                    if self.verbose:
+                        self._log(f"  Found {len(suppressions)} suppression(s) in {path}")
+
             except Exception as e:
                 if self.verbose:
                     self._log(f"  Failed to parse {path}: {e}")
@@ -291,6 +308,36 @@ class AnalysisEngine:
 
             if not ignored:
                 result.append(annotation)
+
+        return result
+
+    def _apply_suppressions(
+        self, annotations: list[Annotation]
+    ) -> list[Annotation]:
+        """Filter annotations based on inline suppression comments.
+
+        Args:
+            annotations: List of annotations.
+
+        Returns:
+            Filtered list of annotations.
+        """
+        if not self._suppressions:
+            return annotations
+
+        checker = SuppressionChecker(self._suppressions)
+        result = []
+
+        for annotation in annotations:
+            rule_id = f"{annotation.lens}/{annotation.rule}"
+            if not checker.is_suppressed(
+                annotation.location.file,
+                annotation.location.start_line,
+                rule_id,
+            ):
+                result.append(annotation)
+            elif self.verbose:
+                self._log(f"  Suppressed: {rule_id} at {annotation.location.file}:{annotation.location.start_line}")
 
         return result
 

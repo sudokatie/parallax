@@ -13,10 +13,10 @@ Parallax analyzes your diffs through specialized lenses. Each lens focuses on on
 ## Features
 
 - **Security Lens** - SQL injection, hardcoded secrets, command injection
-- **Performance Lens** - N+1 queries, unbounded queries
-- **Maintainability Lens** - Complexity, function length, magic numbers
-- **Testing Lens** - Missing tests, weak assertions
+- **Maintainability Lens** - Complexity, function length, parameter count, magic numbers
+- **Testing Lens** - Missing tests, weak assertions, flaky patterns
 - **Multiple output formats** - Text, JSON, SARIF, Markdown
+- **Inline suppression** - Silence specific warnings with comments
 
 ## Quick Start
 
@@ -62,10 +62,22 @@ ignore:
 
 ## Inline Suppression
 
+Silence specific findings with comments:
+
 ```python
-# parallax-ignore security/sql-injection
-cursor.execute(f"SELECT * FROM {table}")
+# Same line - suppress finding on this line
+cursor.execute(f"SELECT * FROM {table}")  # parallax-ignore security/sql-injection
+
+# Next line - suppress finding on the following line
+# parallax-ignore-next-line maintainability/complexity
+def complex_function():
+    ...
+
+# File level - suppress all matching findings in this file
+# parallax-ignore-file testing/*
 ```
+
+Wildcards work: `security/*` suppresses all security rules, `*/*` suppresses everything.
 
 ## License
 
