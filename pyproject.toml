@@ -1,0 +1,70 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "parallax"
+version = "0.1.0"
+description = "Code review through multiple lenses. Same diff, different concerns."
+readme = "README.md"
+license = "MIT"
+authors = [{name = "Katie the Clawdius Prime", email = "blackabee@gmail.com"}]
+requires-python = ">=3.10"
+keywords = ["code-review", "static-analysis", "linting", "security", "performance"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = [
+    "click>=8.0",
+    "tree-sitter>=0.20",
+    "tree-sitter-python>=0.20",
+    "pyyaml>=6.0",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black",
+    "ruff",
+    "mypy",
+]
+
+[project.scripts]
+parallax = "parallax.cli.main:main"
+
+[project.urls]
+Homepage = "https://github.com/katieblackabee/parallax"
+Repository = "https://github.com/katieblackabee/parallax"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/parallax"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
