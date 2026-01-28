@@ -12,11 +12,12 @@ Parallax analyzes your diffs through specialized lenses. Each lens focuses on on
 
 ## Features
 
-- **Security Lens** - SQL injection, hardcoded secrets, command injection
-- **Maintainability Lens** - Complexity, function length, parameter count, magic numbers
+- **Security Lens** - SQL injection, XSS, command injection, path traversal, hardcoded secrets, weak crypto
+- **Maintainability Lens** - Complexity, function length, parameter count, deep nesting, magic numbers
 - **Testing Lens** - Missing tests, weak assertions, flaky patterns
 - **Multiple output formats** - Text, JSON, SARIF, Markdown
 - **Inline suppression** - Silence specific warnings with comments
+- **Git integration** - Analyze commits, ranges, and PRs
 
 ## Quick Start
 
@@ -29,11 +30,20 @@ parallax analyze changes.patch
 # Analyze uncommitted changes
 parallax analyze .
 
+# Analyze a specific commit
+parallax analyze --commit abc123
+
+# Analyze a commit range
+parallax analyze --range main..feature-branch
+
+# Analyze a GitHub PR
+parallax analyze --pr https://github.com/owner/repo/pull/123
+
 # Output as JSON
 parallax analyze changes.patch -o json
 
 # Run specific lenses only
-parallax analyze changes.patch -l security -l performance
+parallax analyze changes.patch -l security -l maintainability
 ```
 
 ## Configuration

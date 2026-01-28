@@ -264,6 +264,80 @@ _INTERNAL_VALUE = 1337
         assert len(magic_findings) == 0
 
 
+class TestDeepNesting:
+    """Tests for deep nesting detection."""
+
+    def test_shallow_nesting_no_finding(self, lens: MaintainabilityLens) -> None:
+        """Test that shallow nesting doesn't trigger findings."""
+        source = """def func():
+    if condition:
+        for item in items:
+            process(item)
+"""
+        context = make_context(source)
+        annotations = lens.analyze(context)
+
+        nesting_findings = [a for a in annotations if a.rule == "deep_nesting"]
+        assert len(nesting_findings) == 0
+
+    def test_deep_nesting_triggers_finding(self, lens: MaintainabilityLens) -> None:
+        """Test that deep nesting triggers findings."""
+        lens.configure({"deep_nesting": {"max_depth": 3}})
+
+        source = """def deeply_nested():
+    if a:
+        if b:
+            if c:
+                if d:
+                    if e:
+                        do_something()
+"""
+        context = make_context(source)
+        annotations = lens.analyze(context)
+
+        nesting_findings = [a for a in annotations if a.rule == "deep_nesting"]
+        assert len(nesting_findings) == 1
+        assert "deeply_nested" in nesting_findings[0].message
+        assert "5" in nesting_findings[0].message  # 5 levels deep
+
+    def test_various_nesting_constructs(self, lens: MaintainabilityLens) -> None:
+        """Test that various control structures count towards nesting."""
+        lens.configure({"deep_nesting": {"max_depth": 2}})
+
+        source = """def mixed_nesting():
+    if condition:
+        for item in items:
+            while running:
+                try:
+                    process()
+                except:
+                    handle()
+"""
+        context = make_context(source)
+        annotations = lens.analyze(context)
+
+        nesting_findings = [a for a in annotations if a.rule == "deep_nesting"]
+        assert len(nesting_findings) == 1
+
+    def test_configurable_max_depth(self, lens: MaintainabilityLens) -> None:
+        """Test that max nesting depth is configurable."""
+        source = """def nested():
+    if a:
+        if b:
+            if c:
+                pass
+"""
+        # With default threshold (4), this shouldn't trigger (only 3 levels)
+        context = make_context(source)
+        annotations = lens.analyze(context)
+        assert len([a for a in annotations if a.rule == "deep_nesting"]) == 0
+
+        # With lower threshold (2), it should trigger
+        lens.configure({"deep_nesting": {"max_depth": 2}})
+        annotations = lens.analyze(context)
+        assert len([a for a in annotations if a.rule == "deep_nesting"]) == 1
+
+
 class TestConfiguration:
     """Tests for lens configuration."""
 

@@ -75,6 +75,7 @@ class MaintainabilityLens(Lens):
             annotations.extend(self._check_function_length(path, ast, context))
             annotations.extend(self._check_parameter_count(path, ast, context))
             annotations.extend(self._check_magic_numbers(path, ast, context))
+            annotations.extend(self._check_deep_nesting(path, ast, context))
 
         return annotations
 
@@ -269,3 +270,88 @@ class MaintainabilityLens(Lens):
             )
 
         return annotations
+
+    def _check_deep_nesting(
+        self, path: str, ast, context: AnalysisContext
+    ) -> list[Annotation]:
+        """Check for deeply nested code blocks."""
+        annotations = []
+
+        functions = find_function_definitions(ast)
+        for func in functions:
+            func_start_line = func.start_point[0] + 1
+
+            # Only check if function is in changed lines
+            if not context.is_line_changed(path, func_start_line):
+                continue
+
+            func_name = get_function_name(func, ast) or "<anonymous>"
+
+            # Find maximum nesting depth in this function
+            max_depth, deepest_line = self._get_max_nesting_depth(func, ast)
+
+            if max_depth > self._max_nesting:
+                # Determine severity based on how deep
+                if max_depth >= self._max_nesting + 3:
+                    severity = Severity.HIGH
+                elif max_depth >= self._max_nesting + 2:
+                    severity = Severity.MEDIUM
+                else:
+                    severity = Severity.LOW
+
+                annotations.append(
+                    Annotation(
+                        lens="maintainability",
+                        rule="deep_nesting",
+                        location=Location(
+                            file=path,
+                            start_line=deepest_line,
+                            end_line=deepest_line,
+                        ),
+                        severity=severity,
+                        confidence=0.85,
+                        message=f"Code in '{func_name}' is nested {max_depth} levels deep (threshold: {self._max_nesting})",
+                        suggestion="Extract nested logic into separate functions or use early returns to reduce nesting",
+                        category="complexity",
+                    )
+                )
+
+        return annotations
+
+    def _get_max_nesting_depth(self, node, ast) -> tuple[int, int]:
+        """Calculate maximum nesting depth within a node.
+
+        Args:
+            node: AST node to analyze.
+            ast: FileAST for text extraction.
+
+        Returns:
+            Tuple of (max_depth, line_of_deepest_point).
+        """
+        # Node types that increase nesting
+        nesting_types = {
+            "if_statement",
+            "for_statement",
+            "while_statement",
+            "try_statement",
+            "with_statement",
+            "match_statement",
+        }
+
+        max_depth = 0
+        deepest_line = node.start_point[0] + 1
+
+        def traverse(n, depth):
+            nonlocal max_depth, deepest_line
+
+            if n.type in nesting_types:
+                depth += 1
+                if depth > max_depth:
+                    max_depth = depth
+                    deepest_line = n.start_point[0] + 1
+
+            for child in n.children:
+                traverse(child, depth)
+
+        traverse(node, 0)
+        return max_depth, deepest_line

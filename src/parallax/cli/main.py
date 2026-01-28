@@ -25,7 +25,28 @@ def cli() -> None:
 
 
 @cli.command()
-@click.argument("target", type=click.Path(exists=True))
+@click.argument("target", type=click.Path(exists=True), required=False, default=None)
+@click.option(
+    "--pr",
+    "pr_url",
+    type=str,
+    default=None,
+    help="GitHub/GitLab PR URL to analyze.",
+)
+@click.option(
+    "--commit",
+    "commit_sha",
+    type=str,
+    default=None,
+    help="Specific commit SHA to analyze.",
+)
+@click.option(
+    "--range",
+    "commit_range",
+    type=str,
+    default=None,
+    help="Commit range to analyze (base..head).",
+)
 @click.option(
     "-l",
     "--lens",
@@ -90,7 +111,10 @@ def cli() -> None:
 @click.option("-v", "--verbose", is_flag=True, help="Verbose output.")
 @click.option("-q", "--quiet", is_flag=True, help="Suppress progress output.")
 def analyze(
-    target: str,
+    target: str | None,
+    pr_url: str | None,
+    commit_sha: str | None,
+    commit_range: str | None,
     lenses: tuple[str, ...],
     exclude_lenses: tuple[str, ...],
     output_format: str | None,
@@ -106,8 +130,17 @@ def analyze(
     """Analyze a diff/directory and output findings.
 
     TARGET can be a patch file (.patch, .diff) or a directory with
-    uncommitted git changes.
+    uncommitted git changes. Alternatively, use --pr, --commit, or --range.
     """
+    # Validate that exactly one target source is provided
+    sources = [target, pr_url, commit_sha, commit_range]
+    provided = [s for s in sources if s is not None]
+    if len(provided) == 0:
+        click.echo("Error: Must provide TARGET, --pr, --commit, or --range", err=True)
+        sys.exit(2)
+    if len(provided) > 1:
+        click.echo("Error: Only one of TARGET, --pr, --commit, or --range can be specified", err=True)
+        sys.exit(2)
     try:
         # Load configuration
         config = load_config(config_path)
@@ -124,7 +157,16 @@ def analyze(
 
         # Create engine and run analysis
         engine = AnalysisEngine(config, verbose=verbose, quiet=quiet)
-        result = engine.analyze(target)
+
+        # Determine analysis mode
+        if pr_url:
+            result = engine.analyze_pr(pr_url)
+        elif commit_sha:
+            result = engine.analyze_commit(commit_sha)
+        elif commit_range:
+            result = engine.analyze_range(commit_range)
+        else:
+            result = engine.analyze(target)
 
         # Filter by min_severity if specified
         if min_severity:

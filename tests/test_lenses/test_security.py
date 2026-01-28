@@ -260,6 +260,134 @@ class TestCommandInjection:
         assert len(cmd_annotations) == 0
 
 
+class TestXSS:
+    """Tests for XSS vulnerability detection."""
+
+    def test_detect_markup_fstring(self):
+        """Test detecting Markup() with f-string."""
+        source = 'from markupsafe import Markup\nuser_input = request.args.get("name")\nhtml = Markup(f"<h1>Hello {user_input}</h1>")'
+        context = create_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        xss_annotations = [a for a in annotations if a.rule == "xss"]
+        assert len(xss_annotations) == 1
+        assert xss_annotations[0].severity == Severity.HIGH
+
+    def test_detect_mark_safe_variable(self):
+        """Test detecting mark_safe() with variable."""
+        source = 'from django.utils.safestring import mark_safe\nhtml = mark_safe(user_content)'
+        context = create_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        xss_annotations = [a for a in annotations if a.rule == "xss"]
+        assert len(xss_annotations) == 1
+        assert xss_annotations[0].severity == Severity.MEDIUM
+
+    def test_no_flag_markup_literal(self):
+        """Test that Markup with literal string is not flagged."""
+        source = 'from markupsafe import Markup\nhtml = Markup("<h1>Static Content</h1>")'
+        context = create_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        xss_annotations = [a for a in annotations if a.rule == "xss"]
+        assert len(xss_annotations) == 0
+
+
+class TestPathTraversal:
+    """Tests for path traversal detection."""
+
+    def test_detect_open_fstring(self):
+        """Test detecting open() with f-string path."""
+        source = 'filename = request.args.get("file")\nwith open(f"/data/{filename}") as f:\n    content = f.read()'
+        context = create_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        path_annotations = [a for a in annotations if a.rule == "path_traversal"]
+        assert len(path_annotations) == 1
+        assert path_annotations[0].severity == Severity.HIGH
+
+    def test_detect_open_concat(self):
+        """Test detecting open() with concatenated path."""
+        source = 'filename = request.args.get("file")\nf = open("/data/" + filename, "r")'
+        context = create_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        path_annotations = [a for a in annotations if a.rule == "path_traversal"]
+        assert len(path_annotations) == 1
+
+    def test_no_flag_literal_path(self):
+        """Test that literal paths are not flagged."""
+        source = 'with open("/etc/config.yaml") as f:\n    config = f.read()'
+        context = create_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        path_annotations = [a for a in annotations if a.rule == "path_traversal"]
+        assert len(path_annotations) == 0
+
+
+class TestWeakCrypto:
+    """Tests for weak cryptography detection."""
+
+    def test_detect_md5(self):
+        """Test detecting MD5 usage."""
+        source = 'import hashlib\nhash = hashlib.md5(password.encode())'
+        context = create_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        crypto_annotations = [a for a in annotations if a.rule == "weak_crypto"]
+        assert len(crypto_annotations) == 1
+        assert "MD5" in crypto_annotations[0].message
+
+    def test_detect_sha1(self):
+        """Test detecting SHA1 usage."""
+        source = 'import hashlib\nhash = hashlib.sha1(data.encode())'
+        context = create_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        crypto_annotations = [a for a in annotations if a.rule == "weak_crypto"]
+        assert len(crypto_annotations) == 1
+        assert "SHA1" in crypto_annotations[0].message
+
+    def test_detect_hashlib_new_md5(self):
+        """Test detecting hashlib.new('md5')."""
+        source = 'import hashlib\nhash = hashlib.new("md5", data)'
+        context = create_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        crypto_annotations = [a for a in annotations if a.rule == "weak_crypto"]
+        assert len(crypto_annotations) == 1
+
+    def test_detect_des_import(self):
+        """Test detecting DES import."""
+        source = 'from Crypto.Cipher import DES'
+        context = create_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        crypto_annotations = [a for a in annotations if a.rule == "weak_crypto"]
+        assert len(crypto_annotations) == 1
+        assert "DES" in crypto_annotations[0].message
+
+    def test_no_flag_sha256(self):
+        """Test that SHA-256 is not flagged."""
+        source = 'import hashlib\nhash = hashlib.sha256(data.encode())'
+        context = create_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        crypto_annotations = [a for a in annotations if a.rule == "weak_crypto"]
+        assert len(crypto_annotations) == 0
+
+
 class TestAnnotationDetails:
     """Tests for annotation details."""
 
