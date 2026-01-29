@@ -1,0 +1,48 @@
+# Parallax configuration
+# https://github.com/katieblackabee/parallax
+
+lenses:
+  security:
+    enabled: true
+    severity_threshold: low
+    rules:
+      sql_injection: true
+      xss: true
+      command_injection: true
+      path_traversal: true
+      hardcoded_secrets: true
+      weak_crypto: true
+      missing_auth: true
+
+  maintainability:
+    enabled: true
+    rules:
+      cyclomatic_complexity:
+        threshold: 10
+      function_length:
+        max_lines: 50
+      parameter_count:
+        max_params: 5
+      deep_nesting:
+        max_depth: 4
+      magic_number: true
+      duplicate_code: true
+      dead_code: true
+
+  testing:
+    enabled: true
+
+settings:
+  min_confidence: 0.5
+  output_format: text
+  # fail_on: high  # Uncomment to fail CI on high+ severity
+
+ignore:
+  paths:
+    - "**/test_*.py"
+    - "**/*_test.py"
+    - "**/tests/**"
+    - "**/migrations/**"
+    - "**/.venv/**"
+  # rules:
+  #   - security/hardcoded_secrets:tests/*

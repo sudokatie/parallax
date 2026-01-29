@@ -71,7 +71,6 @@ venv.bak/
 Thumbs.db
 
 # Project specific
-.parallax.yaml
 *.patch
 
 # Virtual environment
