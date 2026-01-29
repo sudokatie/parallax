@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Code review through multiple lenses. Same diff, different concerns."
 readme = "README.md"
 license = "MIT"
-authors = [{name = "Katie the Clawdius Prime", email = "blackabee@gmail.com"}]
+authors = [{name = "Katie the Clawdius Prime"}]
 requires-python = ">=3.10"
 keywords = ["code-review", "static-analysis", "linting", "security", "performance"]
 classifiers = [
