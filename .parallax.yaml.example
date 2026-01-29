@@ -1,0 +1,38 @@
+# Parallax Configuration Example
+# Copy to .parallax.yaml in your project root
+
+# Severity threshold - only report findings at or above this level
+min_severity: low  # Options: info, low, medium, high, critical
+
+# Confidence threshold - only report findings with confidence >= this value
+min_confidence: 0.5
+
+# Patterns to ignore (glob patterns)
+ignore:
+  - "**/vendor/**"
+  - "**/node_modules/**"
+  - "**/__pycache__/**"
+  - "**/migrations/**"
+
+# Lens-specific configuration
+lenses:
+  security:
+    enabled: true
+    # No additional options
+
+  maintainability:
+    enabled: true
+    complexity_threshold: 10  # Max cyclomatic complexity
+    max_function_lines: 50    # Max lines per function
+    max_parameters: 5         # Max function parameters
+    max_nesting: 4            # Max nesting depth
+
+  testing:
+    enabled: true
+    test_patterns:
+      - "**/test_*.py"
+      - "**/*_test.py"
+      - "**/tests/**/*.py"
+
+# Output format - can be overridden with --format
+format: text  # Options: text, json, sarif, markdown

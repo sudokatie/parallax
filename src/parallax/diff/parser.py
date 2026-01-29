@@ -119,7 +119,11 @@ def _parse_file_diff(lines: list[str], start: int) -> tuple[FileDiff | None, int
     # Skip metadata lines
     while i < len(lines):
         line = lines[i]
-        if line.startswith("index ") or line.startswith("new file mode") or line.startswith("deleted file mode"):
+        if (
+            line.startswith("index ")
+            or line.startswith("new file mode")
+            or line.startswith("deleted file mode")
+        ):
             if "deleted file mode" in line:
                 # Mark for deletion detection later
                 pass
@@ -128,7 +132,11 @@ def _parse_file_diff(lines: list[str], start: int) -> tuple[FileDiff | None, int
         if line.startswith("old mode") or line.startswith("new mode"):
             i += 1
             continue
-        if line.startswith("similarity index") or line.startswith("rename from") or line.startswith("rename to"):
+        if (
+            line.startswith("similarity index")
+            or line.startswith("rename from")
+            or line.startswith("rename to")
+        ):
             i += 1
             continue
         break
@@ -163,7 +171,9 @@ def _parse_file_diff(lines: list[str], start: int) -> tuple[FileDiff | None, int
         line = lines[i]
 
         # Check for next file or end
-        if DIFF_GIT_HEADER.match(line) or (line.startswith("---") and i + 1 < len(lines) and lines[i + 1].startswith("+++")):
+        if DIFF_GIT_HEADER.match(line) or (
+            line.startswith("---") and i + 1 < len(lines) and lines[i + 1].startswith("+++")
+        ):
             break
 
         # Check for hunk header
@@ -178,7 +188,10 @@ def _parse_file_diff(lines: list[str], start: int) -> tuple[FileDiff | None, int
     if old_path is None and new_path is None:
         return None, i
 
-    return FileDiff(old_path=old_path, new_path=new_path, hunks=tuple(hunks), is_binary=is_binary), i
+    return (
+        FileDiff(old_path=old_path, new_path=new_path, hunks=tuple(hunks), is_binary=is_binary),
+        i,
+    )
 
 
 def _parse_hunk(lines: list[str], start: int, hunk_match: re.Match) -> tuple[DiffHunk, int]:
@@ -251,11 +264,14 @@ def _parse_hunk(lines: list[str], start: int, hunk_match: re.Match) -> tuple[Dif
 
         i += 1
 
-    return DiffHunk(
-        old_start=old_start,
-        old_count=old_count,
-        new_start=new_start,
-        new_count=new_count,
-        lines=tuple(hunk_lines),
-        header=header,
-    ), i
+    return (
+        DiffHunk(
+            old_start=old_start,
+            old_count=old_count,
+            new_start=new_start,
+            new_count=new_count,
+            lines=tuple(hunk_lines),
+            header=header,
+        ),
+        i,
+    )

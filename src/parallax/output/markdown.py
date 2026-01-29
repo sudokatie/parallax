@@ -51,7 +51,9 @@ class MarkdownFormatter(Formatter):
         # Output each lens section
         for lens_name in sorted(by_lens.keys()):
             annotations = by_lens[lens_name]
-            lines.append(f"### {lens_name.title()} ({len(annotations)} finding{'s' if len(annotations) != 1 else ''})")
+            lines.append(
+                f"### {lens_name.title()} ({len(annotations)} finding{'s' if len(annotations) != 1 else ''})"
+            )
             lines.append("")
 
             # Table header
@@ -66,7 +68,13 @@ class MarkdownFormatter(Formatter):
             sorted_annotations = sorted(
                 annotations,
                 key=lambda a: (
-                    -[Severity.INFO, Severity.LOW, Severity.MEDIUM, Severity.HIGH, Severity.CRITICAL].index(a.severity),
+                    -[
+                        Severity.INFO,
+                        Severity.LOW,
+                        Severity.MEDIUM,
+                        Severity.HIGH,
+                        Severity.CRITICAL,
+                    ].index(a.severity),
                     a.location.file,
                     a.location.start_line,
                 ),
@@ -87,9 +95,7 @@ class MarkdownFormatter(Formatter):
 
         return "\n".join(lines)
 
-    def _format_table_row(
-        self, annotation: Annotation, include_suggestions: bool
-    ) -> str:
+    def _format_table_row(self, annotation: Annotation, include_suggestions: bool) -> str:
         """Format a single annotation as a table row."""
         loc = annotation.location
         location_str = f"`{loc.file}:{loc.start_line}`"

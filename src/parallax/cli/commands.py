@@ -5,7 +5,6 @@ from pathlib import Path
 
 import click
 
-from parallax import __version__
 from parallax.core.config import ConfigError, load_config, merge_cli_args
 from parallax.core.engine import AnalysisEngine, EngineError
 from parallax.core.types import Severity
@@ -143,7 +142,9 @@ def analyze(
         click.echo("Error: Must provide TARGET, --pr, --commit, or --range", err=True)
         sys.exit(2)
     if len(provided) > 1:
-        click.echo("Error: Only one of TARGET, --pr, --commit, or --range can be specified", err=True)
+        click.echo(
+            "Error: Only one of TARGET, --pr, --commit, or --range can be specified", err=True
+        )
         sys.exit(2)
 
     try:
@@ -176,9 +177,7 @@ def analyze(
         # Filter by min_severity if specified
         if min_severity:
             min_sev = Severity(min_severity)
-            result.annotations = [
-                a for a in result.annotations if a.severity >= min_sev
-            ]
+            result.annotations = [a for a in result.annotations if a.severity >= min_sev]
 
         # Filter by confidence
         result.annotations = [
@@ -240,9 +239,7 @@ def init(force: bool) -> None:
     config_path = Path(".parallax.yaml")
 
     if config_path.exists() and not force:
-        click.echo(
-            "Config file already exists. Use --force to overwrite.", err=True
-        )
+        click.echo("Config file already exists. Use --force to overwrite.", err=True)
         sys.exit(1)
 
     default_config = """\

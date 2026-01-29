@@ -14,7 +14,6 @@ from parallax.lang.python import (
 )
 from parallax.lenses.base import AnalysisContext, Lens, LensRegistry
 
-
 # Weak assertion patterns
 WEAK_ASSERTIONS = [
     "assertTrue(True)",
@@ -50,7 +49,9 @@ class TestingLens(Lens):
 
     @property
     def description(self) -> str:
-        return "Detects testing issues like weak assertions, flaky patterns, and missing test coverage"
+        return (
+            "Detects testing issues like weak assertions, flaky patterns, and missing test coverage"
+        )
 
     def configure(self, config: dict[str, Any]) -> None:
         """Configure lens from config."""
@@ -78,9 +79,7 @@ class TestingLens(Lens):
             annotations.extend(self._check_flaky_patterns(path, ast, context))
 
         # Check for missing tests
-        annotations.extend(
-            self._check_missing_tests(source_files, test_files, context)
-        )
+        annotations.extend(self._check_missing_tests(source_files, test_files, context))
 
         return annotations
 
@@ -97,9 +96,7 @@ class TestingLens(Lens):
         # Also check if path contains 'tests/' or 'test/'
         return "/tests/" in path or "/test/" in path or path.startswith("tests/")
 
-    def _check_weak_assertions(
-        self, path: str, ast, context: AnalysisContext
-    ) -> list[Annotation]:
+    def _check_weak_assertions(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
         """Check for weak assertions that always pass."""
         annotations = []
 
@@ -173,9 +170,7 @@ class TestingLens(Lens):
 
         return annotations
 
-    def _check_flaky_patterns(
-        self, path: str, ast, context: AnalysisContext
-    ) -> list[Annotation]:
+    def _check_flaky_patterns(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
         """Check for patterns that may cause flaky tests."""
         annotations = []
 
@@ -196,7 +191,9 @@ class TestingLens(Lens):
                         message = "Using sleep() in tests can cause flakiness"
                         suggestion = "Use mocking or polling with timeout instead of fixed sleeps"
                     elif "random" in pattern:
-                        message = "Using random values in tests can cause non-deterministic failures"
+                        message = (
+                            "Using random values in tests can cause non-deterministic failures"
+                        )
                         suggestion = "Seed random generators or use fixed test data"
                     else:
                         message = "Using current time in tests can cause flakiness"

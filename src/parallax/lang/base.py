@@ -37,7 +37,7 @@ class FileAST:
         Returns:
             The source text corresponding to the node.
         """
-        return self.source[node.start_byte:node.end_byte].decode("utf-8")
+        return self.source[node.start_byte : node.end_byte].decode("utf-8")
 
     def node_at_line(self, line: int) -> Optional[tree_sitter.Node]:
         """Get the smallest node containing the given line.
@@ -67,7 +67,9 @@ class FileAST:
 
         return find_at_line(self.root)
 
-    def query(self, pattern: str, language: tree_sitter.Language) -> list[tuple[tree_sitter.Node, str]]:
+    def query(
+        self, pattern: str, language: tree_sitter.Language
+    ) -> list[tuple[tree_sitter.Node, str]]:
         """Run a tree-sitter query and return matches.
 
         Args:

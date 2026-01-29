@@ -25,9 +25,7 @@ class SuppressionParser:
     """Parse suppression comments from source code."""
 
     # Regex patterns for suppression comments
-    IGNORE_PATTERN = re.compile(
-        r"#\s*parallax-ignore\s+([a-zA-Z0-9_/*-]+)", re.IGNORECASE
-    )
+    IGNORE_PATTERN = re.compile(r"#\s*parallax-ignore\s+([a-zA-Z0-9_/*-]+)", re.IGNORECASE)
     IGNORE_NEXT_LINE_PATTERN = re.compile(
         r"#\s*parallax-ignore-next-line\s+([a-zA-Z0-9_/*-]+)", re.IGNORECASE
     )

@@ -73,9 +73,7 @@ class SARIFFormatter(Formatter):
 
             rule: dict[str, Any] = {
                 "id": rule_id,
-                "shortDescription": {
-                    "text": annotation.rule.replace("_", " ").title()
-                },
+                "shortDescription": {"text": annotation.rule.replace("_", " ").title()},
             }
 
             if annotation.doc_url:
@@ -126,7 +124,9 @@ class SARIFFormatter(Formatter):
 
             # Add column info if available
             if loc.start_column is not None:
-                result["locations"][0]["physicalLocation"]["region"]["startColumn"] = loc.start_column
+                result["locations"][0]["physicalLocation"]["region"][
+                    "startColumn"
+                ] = loc.start_column
             if loc.end_column is not None:
                 result["locations"][0]["physicalLocation"]["region"]["endColumn"] = loc.end_column
 

@@ -3,7 +3,6 @@
 from parallax.core.types import AnalysisResult, Annotation, Severity
 from parallax.output.base import Formatter
 
-
 # ANSI color codes
 COLORS = {
     Severity.CRITICAL: "\033[91m",  # Red
@@ -90,9 +89,7 @@ class TextFormatter(Formatter):
 
         return "\n".join(lines)
 
-    def _format_annotation(
-        self, annotation: Annotation, include_suggestions: bool
-    ) -> str:
+    def _format_annotation(self, annotation: Annotation, include_suggestions: bool) -> str:
         """Format a single annotation."""
         lines: list[str] = []
 

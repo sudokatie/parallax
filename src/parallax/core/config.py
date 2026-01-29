@@ -1,6 +1,5 @@
 """Configuration loading and validation for Parallax."""
 
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
@@ -211,9 +210,7 @@ def _parse_lens_config(raw: dict) -> LensConfig:
         try:
             severity_threshold = Severity(raw["severity_threshold"])
         except ValueError:
-            raise ConfigError(
-                f"Invalid severity_threshold: {raw['severity_threshold']}"
-            )
+            raise ConfigError(f"Invalid severity_threshold: {raw['severity_threshold']}")
 
     rules = raw.get("rules", {})
     if rules is None:

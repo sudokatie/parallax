@@ -8,7 +8,6 @@ from typing import Any
 
 from parallax.core.types import Annotation, Location, Severity
 from parallax.lang.python import (
-    PythonAnalyzer,
     count_complexity,
     find_function_definitions,
     get_function_name,
@@ -83,9 +82,7 @@ class MaintainabilityLens(Lens):
 
         return annotations
 
-    def _check_complexity(
-        self, path: str, ast, context: AnalysisContext
-    ) -> list[Annotation]:
+    def _check_complexity(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
         """Check for high cyclomatic complexity."""
         annotations = []
 
@@ -129,9 +126,7 @@ class MaintainabilityLens(Lens):
 
         return annotations
 
-    def _check_function_length(
-        self, path: str, ast, context: AnalysisContext
-    ) -> list[Annotation]:
+    def _check_function_length(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
         """Check for overly long functions."""
         annotations = []
 
@@ -173,9 +168,7 @@ class MaintainabilityLens(Lens):
 
         return annotations
 
-    def _check_parameter_count(
-        self, path: str, ast, context: AnalysisContext
-    ) -> list[Annotation]:
+    def _check_parameter_count(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
         """Check for functions with too many parameters."""
         annotations = []
 
@@ -213,9 +206,7 @@ class MaintainabilityLens(Lens):
 
         return annotations
 
-    def _check_magic_numbers(
-        self, path: str, ast, context: AnalysisContext
-    ) -> list[Annotation]:
+    def _check_magic_numbers(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
         """Check for magic numbers in code."""
         annotations = []
 
@@ -225,9 +216,24 @@ class MaintainabilityLens(Lens):
 
         # Common acceptable values
         acceptable = {
-            "0", "1", "-1", "2", "0.0", "1.0", "0.5", "100", "1000",
-            "60", "24", "365", "3600", "86400",  # Time constants
-            "10", "16", "256", "1024",  # Common bases/sizes
+            "0",
+            "1",
+            "-1",
+            "2",
+            "0.0",
+            "1.0",
+            "0.5",
+            "100",
+            "1000",
+            "60",
+            "24",
+            "365",
+            "3600",
+            "86400",  # Time constants
+            "10",
+            "16",
+            "256",
+            "1024",  # Common bases/sizes
         }
 
         for num in numbers:
@@ -275,9 +281,7 @@ class MaintainabilityLens(Lens):
 
         return annotations
 
-    def _check_deep_nesting(
-        self, path: str, ast, context: AnalysisContext
-    ) -> list[Annotation]:
+    def _check_deep_nesting(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
         """Check for deeply nested code blocks."""
         annotations = []
 
@@ -360,9 +364,7 @@ class MaintainabilityLens(Lens):
         traverse(node, 0)
         return max_depth, deepest_line
 
-    def _check_dead_code(
-        self, path: str, ast, context: AnalysisContext
-    ) -> list[Annotation]:
+    def _check_dead_code(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
         """Check for unreachable code paths."""
         annotations = []
 
@@ -417,7 +419,11 @@ class MaintainabilityLens(Lens):
         dead_lines = []
 
         # Get direct children (statements in function body)
-        statements = [child for child in body.children if child.type not in ("comment", "NEWLINE", "INDENT", "DEDENT")]
+        statements = [
+            child
+            for child in body.children
+            if child.type not in ("comment", "NEWLINE", "INDENT", "DEDENT")
+        ]
 
         found_exit = False
         for stmt in statements:
@@ -441,7 +447,9 @@ class MaintainabilityLens(Lens):
         annotations = []
 
         # Collect all functions with their normalized bodies
-        function_bodies: list[tuple[str, str, int, str, int]] = []  # (path, name, line, body_hash, body_lines)
+        function_bodies: list[tuple[str, str, int, str, int]] = (
+            []
+        )  # (path, name, line, body_hash, body_lines)
 
         for path, ast in context.files.items():
             if not path.endswith((".py", ".pyi")):

@@ -107,9 +107,7 @@ class AnalysisEngine:
 
                 # Filter by severity threshold
                 lens_annotations = [
-                    a
-                    for a in lens_annotations
-                    if a.severity >= lens_config.severity_threshold
+                    a for a in lens_annotations if a.severity >= lens_config.severity_threshold
                 ]
 
                 # Filter by ignore patterns (config-based)
@@ -260,7 +258,6 @@ class AnalysisEngine:
         """
         try:
             import urllib.request
-            import json
 
             # Fetch PR diff using GitHub API
             url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_num}"
@@ -301,8 +298,8 @@ class AnalysisEngine:
             AnalysisResult with annotations and errors.
         """
         try:
-            import urllib.request
             import urllib.parse
+            import urllib.request
 
             # GitLab project ID is owner%2Frepo (URL encoded)
             project_id = urllib.parse.quote(f"{owner}/{repo}", safe="")
@@ -340,9 +337,7 @@ class AnalysisEngine:
         except urllib.error.URLError as e:
             raise EngineError(f"Network error: {e.reason}") from e
 
-    def _analyze_diff(
-        self, diff: ParsedDiff, base_path: Path, target: str
-    ) -> AnalysisResult:
+    def _analyze_diff(self, diff: ParsedDiff, base_path: Path, target: str) -> AnalysisResult:
         """Analyze a parsed diff with source file access.
 
         Args:
@@ -428,9 +423,7 @@ class AnalysisEngine:
 
                 # Filter by severity threshold
                 lens_annotations = [
-                    a
-                    for a in lens_annotations
-                    if a.severity >= lens_config.severity_threshold
+                    a for a in lens_annotations if a.severity >= lens_config.severity_threshold
                 ]
 
                 # Filter by ignore patterns (config-based)
@@ -508,9 +501,7 @@ class AnalysisEngine:
         except FileNotFoundError:
             raise EngineError("Git not found. Is git installed?")
 
-    def _parse_source_files(
-        self, diff: ParsedDiff, base_path: Path
-    ) -> dict[str, FileAST]:
+    def _parse_source_files(self, diff: ParsedDiff, base_path: Path) -> dict[str, FileAST]:
         """Parse source files referenced in the diff.
 
         Args:
@@ -589,9 +580,7 @@ class AnalysisEngine:
 
         return lenses
 
-    def _apply_ignore_rules(
-        self, annotations: list[Annotation]
-    ) -> list[Annotation]:
+    def _apply_ignore_rules(self, annotations: list[Annotation]) -> list[Annotation]:
         """Filter annotations based on ignore rules.
 
         Args:
@@ -633,9 +622,7 @@ class AnalysisEngine:
 
         return result
 
-    def _apply_suppressions(
-        self, annotations: list[Annotation]
-    ) -> list[Annotation]:
+    def _apply_suppressions(self, annotations: list[Annotation]) -> list[Annotation]:
         """Filter annotations based on inline suppression comments.
 
         Args:
@@ -659,7 +646,9 @@ class AnalysisEngine:
             ):
                 result.append(annotation)
             elif self.verbose:
-                self._log(f"  Suppressed: {rule_id} at {annotation.location.file}:{annotation.location.start_line}")
+                self._log(
+                    f"  Suppressed: {rule_id} at {annotation.location.file}:{annotation.location.start_line}"
+                )
 
         return result
 

@@ -5,10 +5,7 @@ Detects common security vulnerabilities in Python code.
 
 from parallax.core.types import Annotation, Location, Severity
 from parallax.lang.python import (
-    PythonAnalyzer,
-    find_f_strings,
     find_function_calls,
-    find_string_literals,
 )
 from parallax.lenses.base import AnalysisContext, Lens, LensRegistry
 
@@ -63,9 +60,7 @@ class SecurityLens(Lens):
 
         return annotations
 
-    def _check_sql_injection(
-        self, path: str, ast, context: AnalysisContext
-    ) -> list[Annotation]:
+    def _check_sql_injection(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
         """Check for SQL injection vulnerabilities."""
         annotations = []
 
@@ -186,7 +181,14 @@ class SecurityLens(Lens):
             if right.type == "string":
                 value = ast.text_at(right)
                 # Ignore empty strings and placeholder values
-                if value in ('""', "''", '"placeholder"', "'placeholder'", '"changeme"', "'changeme'"):
+                if value in (
+                    '""',
+                    "''",
+                    '"placeholder"',
+                    "'placeholder'",
+                    '"changeme"',
+                    "'changeme'",
+                ):
                     continue
 
                 annotations.append(
@@ -290,9 +292,7 @@ class SecurityLens(Lens):
 
         return annotations
 
-    def _check_xss(
-        self, path: str, ast, context: AnalysisContext
-    ) -> list[Annotation]:
+    def _check_xss(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
         """Check for XSS vulnerabilities (unescaped HTML output)."""
         annotations = []
 
@@ -384,9 +384,7 @@ class SecurityLens(Lens):
 
         return annotations
 
-    def _check_path_traversal(
-        self, path: str, ast, context: AnalysisContext
-    ) -> list[Annotation]:
+    def _check_path_traversal(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
         """Check for path traversal vulnerabilities."""
         annotations = []
 
@@ -452,9 +450,7 @@ class SecurityLens(Lens):
 
         return annotations
 
-    def _check_weak_crypto(
-        self, path: str, ast, context: AnalysisContext
-    ) -> list[Annotation]:
+    def _check_weak_crypto(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
         """Check for weak cryptographic algorithms."""
         annotations = []
 
@@ -553,9 +549,7 @@ class SecurityLens(Lens):
 
         return annotations
 
-    def _check_missing_auth(
-        self, path: str, ast, context: AnalysisContext
-    ) -> list[Annotation]:
+    def _check_missing_auth(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
         """Check for endpoints without authentication checks.
 
         Detects Flask/Django/FastAPI route handlers that don't have

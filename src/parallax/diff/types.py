@@ -36,11 +36,19 @@ class DiffHunk:
 
     def added_lines(self) -> set[int]:
         """Return set of added line numbers (in new file)."""
-        return {line.new_line for line in self.lines if line.kind == DiffLineKind.ADD and line.new_line is not None}
+        return {
+            line.new_line
+            for line in self.lines
+            if line.kind == DiffLineKind.ADD and line.new_line is not None
+        }
 
     def removed_lines(self) -> set[int]:
         """Return set of removed line numbers (in old file)."""
-        return {line.old_line for line in self.lines if line.kind == DiffLineKind.REMOVE and line.old_line is not None}
+        return {
+            line.old_line
+            for line in self.lines
+            if line.kind == DiffLineKind.REMOVE and line.old_line is not None
+        }
 
 
 @dataclass(frozen=True)
@@ -74,7 +82,11 @@ class FileDiff:
     @property
     def is_renamed(self) -> bool:
         """Check if this file was renamed."""
-        return self.old_path is not None and self.new_path is not None and self.old_path != self.new_path
+        return (
+            self.old_path is not None
+            and self.new_path is not None
+            and self.old_path != self.new_path
+        )
 
     def changed_lines(self) -> set[int]:
         """Return set of all changed line numbers in new file (added lines)."""
