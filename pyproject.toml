@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Code review through multiple lenses. Same diff, different concerns."
 readme = "README.md"
 license = "MIT"
-authors = [{name = "Katie the Clawdius Prime"}]
+authors = [{name = "Katie"}]
 requires-python = ">=3.10"
 keywords = ["code-review", "static-analysis", "linting", "security", "performance"]
 classifiers = [
@@ -43,8 +43,8 @@ dev = [
 parallax = "parallax.cli.main:main"
 
 [project.urls]
-Homepage = "https://github.com/katieblackabee/parallax"
-Repository = "https://github.com/katieblackabee/parallax"
+Homepage = "https://github.com/sudokatie/parallax"
+Repository = "https://github.com/sudokatie/parallax"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/parallax"]

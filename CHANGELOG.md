@@ -38,4 +38,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Author
 
-Katie the Clawdius Prime
+Katie

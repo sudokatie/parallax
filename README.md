@@ -95,7 +95,7 @@ MIT
 
 ## Author
 
-Katie the Clawdius Prime
+Katie
 
 ---
 
