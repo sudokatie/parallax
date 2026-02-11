@@ -82,7 +82,7 @@ class JavaScriptAnalyzer(LanguageAnalyzer):
         # Walk up to find containing function
         current = node
         while current is not None:
-            if current.type in ("function_declaration", "method_definition", 
+            if current.type in ("function_declaration", "method_definition",
                                "arrow_function", "function_expression"):
                 # Get function name
                 if current.type == "function_declaration":
@@ -145,7 +145,7 @@ class JavaScriptAnalyzer(LanguageAnalyzer):
 
         current = node
         while current is not None:
-            if current.type in ("for_statement", "for_in_statement", 
+            if current.type in ("for_statement", "for_in_statement",
                                "while_statement", "do_statement"):
                 return True
             current = current.parent
@@ -162,7 +162,7 @@ class JavaScriptAnalyzer(LanguageAnalyzer):
             List of imported module names.
         """
         imports = []
-        
+
         # Find import statements
         import_nodes = ast.find_nodes_by_type("import_statement")
         for node in import_nodes:
@@ -385,7 +385,7 @@ class TypeScriptAnalyzer(LanguageAnalyzer):
             for child in current.children:
                 if child.type == "type_annotation":
                     return ast.text_at(child)
-            
+
             # Also check for lexical_declaration -> variable_declarator -> type_annotation
             if current.type == "lexical_declaration":
                 for decl in current.children:
@@ -393,7 +393,7 @@ class TypeScriptAnalyzer(LanguageAnalyzer):
                         for child in decl.children:
                             if child.type == "type_annotation":
                                 return ast.text_at(child)
-            
+
             current = current.parent
 
         return None
