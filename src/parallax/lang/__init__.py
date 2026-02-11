@@ -1,6 +1,7 @@
 """Language analyzer module for Parallax."""
 
 from parallax.lang.base import FileAST, LanguageAnalyzer
+from parallax.lang.javascript import JavaScriptAnalyzer, TypeScriptAnalyzer
 from parallax.lang.python import (
     PythonAnalyzer,
     count_complexity,
@@ -18,6 +19,8 @@ __all__ = [
     "FileAST",
     "LanguageAnalyzer",
     "PythonAnalyzer",
+    "JavaScriptAnalyzer",
+    "TypeScriptAnalyzer",
     "find_function_definitions",
     "find_class_definitions",
     "find_function_calls",
