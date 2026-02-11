@@ -14,6 +14,7 @@ Parallax analyzes your diffs through specialized lenses. Each lens focuses on on
 
 - **Security Lens** - SQL injection, XSS, command injection, path traversal, hardcoded secrets, weak crypto
 - **Maintainability Lens** - Complexity, function length, parameter count, deep nesting, magic numbers
+- **Performance Lens** - N+1 queries, string concat in loops, list vs generator, unbounded loops, large allocations
 - **Testing Lens** - Missing tests, weak assertions, flaky patterns
 - **Multiple output formats** - Text, JSON, SARIF, Markdown
 - **Inline suppression** - Silence specific warnings with comments
