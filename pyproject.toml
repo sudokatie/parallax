@@ -28,6 +28,7 @@ dependencies = [
     "tree-sitter-python>=0.20",
     "tree-sitter-javascript>=0.20",
     "tree-sitter-typescript>=0.20",
+    "tree-sitter-go>=0.20",
     "pyyaml>=6.0",
     "rich>=13.0",
 ]

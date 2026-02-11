@@ -56,13 +56,19 @@ Parallax uses tree-sitter for AST parsing and supports:
 | Python | .py, .pyi | Full support |
 | JavaScript | .js, .jsx, .mjs, .cjs | Full support |
 | TypeScript | .ts, .tsx, .mts, .cts | Full support |
-| Go | Coming soon | Planned |
+| Go | .go | Full support |
 
 Each language analyzer provides:
 - Function and class detection
 - Loop detection (for performance analysis)
 - Import/export detection
 - Language-specific patterns
+
+Go-specific analysis includes:
+- Struct and interface detection
+- Method receiver detection
+- Package name extraction
+- Range and traditional loop detection
 
 ## Configuration
 
