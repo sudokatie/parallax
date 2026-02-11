@@ -47,6 +47,23 @@ parallax analyze changes.patch -o json
 parallax analyze changes.patch -l security -l maintainability
 ```
 
+## Supported Languages
+
+Parallax uses tree-sitter for AST parsing and supports:
+
+| Language | Extensions | Status |
+|----------|------------|--------|
+| Python | .py, .pyi | Full support |
+| JavaScript | .js, .jsx, .mjs, .cjs | Full support |
+| TypeScript | .ts, .tsx, .mts, .cts | Full support |
+| Go | Coming soon | Planned |
+
+Each language analyzer provides:
+- Function and class detection
+- Loop detection (for performance analysis)
+- Import/export detection
+- Language-specific patterns
+
 ## Configuration
 
 Create `.parallax.yaml` in your project:
