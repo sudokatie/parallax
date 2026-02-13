@@ -1,6 +1,7 @@
 """Lenses module for Parallax."""
 
 from parallax.lenses.base import AnalysisContext, Lens, LensRegistry
+from parallax.lenses.accessibility import AccessibilityLens
 from parallax.lenses.maintainability import MaintainabilityLens
 from parallax.lenses.performance import PerformanceLens
 from parallax.lenses.security import SecurityLens
@@ -10,6 +11,7 @@ __all__ = [
     "Lens",
     "LensRegistry",
     "AnalysisContext",
+    "AccessibilityLens",
     "SecurityLens",
     "MaintainabilityLens",
     "TestingLens",
