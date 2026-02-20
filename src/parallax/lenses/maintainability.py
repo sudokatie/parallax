@@ -66,16 +66,24 @@ class MaintainabilityLens(Lens):
         annotations: list[Annotation] = []
 
         for path, ast in context.files.items():
-            # Only analyze Python files
-            if not path.endswith((".py", ".pyi")):
-                continue
+            # Python-specific checks
+            if path.endswith((".py", ".pyi")):
+                annotations.extend(self._check_complexity(path, ast, context))
+                annotations.extend(self._check_function_length(path, ast, context))
+                annotations.extend(self._check_parameter_count(path, ast, context))
+                annotations.extend(self._check_magic_numbers(path, ast, context))
+                annotations.extend(self._check_deep_nesting(path, ast, context))
+                annotations.extend(self._check_dead_code(path, ast, context))
 
-            annotations.extend(self._check_complexity(path, ast, context))
-            annotations.extend(self._check_function_length(path, ast, context))
-            annotations.extend(self._check_parameter_count(path, ast, context))
-            annotations.extend(self._check_magic_numbers(path, ast, context))
-            annotations.extend(self._check_deep_nesting(path, ast, context))
-            annotations.extend(self._check_dead_code(path, ast, context))
+            # JavaScript/TypeScript-specific checks
+            elif path.endswith((".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts")):
+                annotations.extend(self._check_js_loose_equality(path, ast, context))
+                annotations.extend(self._check_js_var_usage(path, ast, context))
+
+            # Go-specific checks
+            elif path.endswith(".go"):
+                annotations.extend(self._check_go_defer_in_loop(path, ast, context))
+                annotations.extend(self._check_go_unchecked_error(path, ast, context))
 
         # Check for duplicate code across all files
         annotations.extend(self._check_duplicate_code(context))
@@ -511,5 +519,178 @@ class MaintainabilityLens(Lens):
                 )
             else:
                 seen[body_hash] = (path, name, line)
+
+        return annotations
+
+    # ========== JavaScript/TypeScript-specific rules ==========
+
+    def _check_js_loose_equality(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
+        """Check for == and != instead of === and !== in JavaScript/TypeScript."""
+        annotations = []
+
+        # Find binary expressions
+        binary_exprs = ast.find_nodes_by_type("binary_expression")
+        for expr in binary_exprs:
+            line = expr.start_point[0] + 1
+
+            if not context.is_line_changed(path, line):
+                continue
+
+            # Get the operator
+            operator = expr.child_by_field_name("operator")
+            if operator is None:
+                continue
+
+            op_text = ast.text_at(operator)
+            if op_text == "==":
+                annotations.append(
+                    Annotation(
+                        lens="maintainability",
+                        rule="js_loose_equality",
+                        location=Location(
+                            file=path,
+                            start_line=line,
+                            end_line=expr.end_point[0] + 1,
+                        ),
+                        severity=Severity.LOW,
+                        confidence=0.9,
+                        message="Use === instead of == to avoid type coercion surprises",
+                        suggestion="Replace == with === for strict equality comparison",
+                        category="style",
+                    )
+                )
+            elif op_text == "!=":
+                annotations.append(
+                    Annotation(
+                        lens="maintainability",
+                        rule="js_loose_inequality",
+                        location=Location(
+                            file=path,
+                            start_line=line,
+                            end_line=expr.end_point[0] + 1,
+                        ),
+                        severity=Severity.LOW,
+                        confidence=0.9,
+                        message="Use !== instead of != to avoid type coercion surprises",
+                        suggestion="Replace != with !== for strict inequality comparison",
+                        category="style",
+                    )
+                )
+
+        return annotations
+
+    def _check_js_var_usage(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
+        """Check for var usage instead of let/const in JavaScript/TypeScript."""
+        annotations = []
+
+        # Find variable declarations
+        var_decls = ast.find_nodes_by_type("variable_declaration")
+        for decl in var_decls:
+            line = decl.start_point[0] + 1
+
+            if not context.is_line_changed(path, line):
+                continue
+
+            # Check if it's a var declaration
+            decl_text = ast.text_at(decl)
+            if decl_text.startswith("var "):
+                annotations.append(
+                    Annotation(
+                        lens="maintainability",
+                        rule="js_var_usage",
+                        location=Location(
+                            file=path,
+                            start_line=line,
+                            end_line=decl.end_point[0] + 1,
+                        ),
+                        severity=Severity.LOW,
+                        confidence=0.95,
+                        message="Use let or const instead of var for better scoping",
+                        suggestion="Replace var with const (if not reassigned) or let (if reassigned)",
+                        category="style",
+                    )
+                )
+
+        return annotations
+
+    # ========== Go-specific rules ==========
+
+    def _check_go_defer_in_loop(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
+        """Check for defer statements inside loops in Go."""
+        annotations = []
+
+        # Find defer statements
+        defer_stmts = ast.find_nodes_by_type("defer_statement")
+        for defer in defer_stmts:
+            line = defer.start_point[0] + 1
+
+            if not context.is_line_changed(path, line):
+                continue
+
+            # Check if inside a loop
+            current = defer.parent
+            while current is not None:
+                if current.type in ("for_statement", "range_clause"):
+                    annotations.append(
+                        Annotation(
+                            lens="maintainability",
+                            rule="go_defer_in_loop",
+                            location=Location(
+                                file=path,
+                                start_line=line,
+                                end_line=defer.end_point[0] + 1,
+                            ),
+                            severity=Severity.MEDIUM,
+                            confidence=0.9,
+                            message="defer inside loop - deferred calls won't execute until function returns",
+                            suggestion="Move defer outside the loop, or handle cleanup explicitly within each iteration",
+                            category="resource",
+                        )
+                    )
+                    break
+                current = current.parent
+
+        return annotations
+
+    def _check_go_unchecked_error(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
+        """Check for unchecked error returns in Go (assigning error to _)."""
+        annotations = []
+
+        # Find short variable declarations and assignments
+        for node_type in ("short_var_declaration", "assignment_statement"):
+            decls = ast.find_nodes_by_type(node_type)
+            for decl in decls:
+                line = decl.start_point[0] + 1
+
+                if not context.is_line_changed(path, line):
+                    continue
+
+                # Get the left side
+                left = decl.child_by_field_name("left")
+                if left is None:
+                    continue
+
+                left_text = ast.text_at(left)
+                # Check if last identifier is _ (ignoring error)
+                if left_text.endswith("_") or ", _" in left_text:
+                    # Check if right side is a function call (which might return error)
+                    right = decl.child_by_field_name("right")
+                    if right and right.type == "call_expression":
+                        annotations.append(
+                            Annotation(
+                                lens="maintainability",
+                                rule="go_unchecked_error",
+                                location=Location(
+                                    file=path,
+                                    start_line=line,
+                                    end_line=decl.end_point[0] + 1,
+                                ),
+                                severity=Severity.MEDIUM,
+                                confidence=0.7,
+                                message="Error return value is being ignored (assigned to _)",
+                                suggestion="Handle the error explicitly or document why it's safe to ignore",
+                                category="error_handling",
+                            )
+                        )
 
         return annotations

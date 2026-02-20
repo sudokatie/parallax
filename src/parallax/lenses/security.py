@@ -45,18 +45,27 @@ class SecurityLens(Lens):
         annotations: list[Annotation] = []
 
         for path, ast in context.files.items():
-            # Only analyze Python files
-            if not path.endswith((".py", ".pyi")):
-                continue
+            # Python-specific checks
+            if path.endswith((".py", ".pyi")):
+                annotations.extend(self._check_sql_injection(path, ast, context))
+                annotations.extend(self._check_hardcoded_secrets(path, ast, context))
+                annotations.extend(self._check_command_injection(path, ast, context))
+                annotations.extend(self._check_xss(path, ast, context))
+                annotations.extend(self._check_path_traversal(path, ast, context))
+                annotations.extend(self._check_weak_crypto(path, ast, context))
+                annotations.extend(self._check_missing_auth(path, ast, context))
 
-            # Check each rule
-            annotations.extend(self._check_sql_injection(path, ast, context))
-            annotations.extend(self._check_hardcoded_secrets(path, ast, context))
-            annotations.extend(self._check_command_injection(path, ast, context))
-            annotations.extend(self._check_xss(path, ast, context))
-            annotations.extend(self._check_path_traversal(path, ast, context))
-            annotations.extend(self._check_weak_crypto(path, ast, context))
-            annotations.extend(self._check_missing_auth(path, ast, context))
+            # JavaScript/TypeScript-specific checks
+            elif path.endswith((".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts")):
+                annotations.extend(self._check_js_eval(path, ast, context))
+                annotations.extend(self._check_js_innerhtml(path, ast, context))
+                annotations.extend(self._check_js_document_write(path, ast, context))
+                annotations.extend(self._check_hardcoded_secrets(path, ast, context))
+
+            # Go-specific checks
+            elif path.endswith(".go"):
+                annotations.extend(self._check_go_sql_injection(path, ast, context))
+                annotations.extend(self._check_hardcoded_secrets(path, ast, context))
 
         return annotations
 
@@ -654,5 +663,163 @@ class SecurityLens(Lens):
                         category="auth",
                     )
                 )
+
+        return annotations
+
+    # ========== JavaScript/TypeScript-specific rules ==========
+
+    def _check_js_eval(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
+        """Check for eval() usage in JavaScript/TypeScript."""
+        annotations = []
+
+        # Find all call expressions
+        calls = ast.find_nodes_by_type("call_expression")
+        for call in calls:
+            line = call.start_point[0] + 1
+
+            if not context.is_line_changed(path, line):
+                continue
+
+            # Get the function being called
+            func = call.child_by_field_name("function")
+            if func is None:
+                continue
+
+            func_name = ast.text_at(func)
+            if func_name in ("eval", "Function"):
+                annotations.append(
+                    Annotation(
+                        lens="security",
+                        rule="js_eval",
+                        location=Location(
+                            file=path,
+                            start_line=line,
+                            end_line=call.end_point[0] + 1,
+                        ),
+                        severity=Severity.HIGH,
+                        confidence=0.95,
+                        message=f"Use of {func_name}() allows arbitrary code execution",
+                        suggestion="Avoid eval() and Function() - use safer alternatives like JSON.parse() for data or specific parsers",
+                        category="injection",
+                    )
+                )
+
+        return annotations
+
+    def _check_js_innerhtml(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
+        """Check for innerHTML/outerHTML assignments in JavaScript/TypeScript."""
+        annotations = []
+
+        # Find assignment expressions
+        assignments = ast.find_nodes_by_type("assignment_expression")
+        for assign in assignments:
+            line = assign.start_point[0] + 1
+
+            if not context.is_line_changed(path, line):
+                continue
+
+            # Get the left side
+            left = assign.child_by_field_name("left")
+            if left is None:
+                continue
+
+            left_text = ast.text_at(left)
+            if ".innerHTML" in left_text or ".outerHTML" in left_text:
+                annotations.append(
+                    Annotation(
+                        lens="security",
+                        rule="js_innerhtml",
+                        location=Location(
+                            file=path,
+                            start_line=line,
+                            end_line=assign.end_point[0] + 1,
+                        ),
+                        severity=Severity.HIGH,
+                        confidence=0.8,
+                        message="Direct innerHTML/outerHTML assignment can lead to XSS vulnerabilities",
+                        suggestion="Use textContent for text, or sanitize HTML with DOMPurify before assignment",
+                        category="xss",
+                    )
+                )
+
+        return annotations
+
+    def _check_js_document_write(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
+        """Check for document.write() usage in JavaScript/TypeScript."""
+        annotations = []
+
+        calls = ast.find_nodes_by_type("call_expression")
+        for call in calls:
+            line = call.start_point[0] + 1
+
+            if not context.is_line_changed(path, line):
+                continue
+
+            func = call.child_by_field_name("function")
+            if func is None:
+                continue
+
+            func_text = ast.text_at(func)
+            if func_text in ("document.write", "document.writeln"):
+                annotations.append(
+                    Annotation(
+                        lens="security",
+                        rule="js_document_write",
+                        location=Location(
+                            file=path,
+                            start_line=line,
+                            end_line=call.end_point[0] + 1,
+                        ),
+                        severity=Severity.MEDIUM,
+                        confidence=0.9,
+                        message="document.write() can be exploited for XSS attacks",
+                        suggestion="Use DOM methods like createElement() and appendChild() instead",
+                        category="xss",
+                    )
+                )
+
+        return annotations
+
+    # ========== Go-specific rules ==========
+
+    def _check_go_sql_injection(self, path: str, ast, context: AnalysisContext) -> list[Annotation]:
+        """Check for SQL injection in Go using fmt.Sprintf with queries."""
+        annotations = []
+
+        # Find call expressions
+        calls = ast.find_nodes_by_type("call_expression")
+        for call in calls:
+            line = call.start_point[0] + 1
+
+            if not context.is_line_changed(path, line):
+                continue
+
+            func = call.child_by_field_name("function")
+            if func is None:
+                continue
+
+            func_text = ast.text_at(func)
+            # Check for fmt.Sprintf or similar
+            if func_text in ("fmt.Sprintf", "fmt.Sprint", "strings.Join"):
+                # Get the full call text to check if it looks like SQL
+                call_text = ast.text_at(call).upper()
+                sql_keywords = ["SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE"]
+                if any(kw in call_text for kw in sql_keywords):
+                    annotations.append(
+                        Annotation(
+                            lens="security",
+                            rule="go_sql_injection",
+                            location=Location(
+                                file=path,
+                                start_line=line,
+                                end_line=call.end_point[0] + 1,
+                            ),
+                            severity=Severity.HIGH,
+                            confidence=0.8,
+                            message="SQL query built with fmt.Sprintf - potential SQL injection risk",
+                            suggestion="Use parameterized queries: db.Query('SELECT * FROM users WHERE id = ?', id)",
+                            category="injection",
+                        )
+                    )
 
         return annotations

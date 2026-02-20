@@ -6,6 +6,8 @@ from parallax.core.config import LensConfig
 from parallax.core.types import Severity
 from parallax.diff.types import DiffHunk, DiffLine, DiffLineKind, FileDiff, ParsedDiff
 from parallax.lang.python import PythonAnalyzer
+from parallax.lang.javascript import JavaScriptAnalyzer
+from parallax.lang.go import GoAnalyzer
 from parallax.lenses.base import AnalysisContext, LensRegistry
 from parallax.lenses.security import SecurityLens
 
@@ -490,3 +492,201 @@ class TestAnnotationDetails:
         assert len(annotations) == 1
         assert annotations[0].location.file == "test.py"
         assert annotations[0].location.start_line == 2
+
+
+# ========== JavaScript/TypeScript-specific tests ==========
+
+def create_js_context(source: str, changed_lines: list[int] | None = None, filename: str = "test.js") -> AnalysisContext:
+    """Create a test context for JavaScript files."""
+    source_lines = source.split("\n")
+    
+    if changed_lines is None:
+        changed_lines = list(range(1, len(source_lines) + 1))
+    
+    lines = []
+    for i, content in enumerate(source_lines):
+        line_num = i + 1
+        if line_num in changed_lines:
+            lines.append(
+                DiffLine(kind=DiffLineKind.ADD, content=content, old_line=None, new_line=line_num)
+            )
+        else:
+            lines.append(
+                DiffLine(kind=DiffLineKind.CONTEXT, content=content, old_line=line_num, new_line=line_num)
+            )
+
+    hunk = DiffHunk(
+        old_start=1,
+        old_count=len(source_lines),
+        new_start=1,
+        new_count=len(source_lines),
+        lines=tuple(lines),
+        header="@@",
+    )
+    file_diff = FileDiff(old_path=filename, new_path=filename, hunks=(hunk,))
+    diff = ParsedDiff(files=(file_diff,))
+
+    analyzer = JavaScriptAnalyzer()
+    ast = analyzer.parse_source(source, filename)
+
+    return AnalysisContext(
+        diff=diff,
+        files={filename: ast},
+        config=LensConfig(),
+    )
+
+
+class TestJsEval:
+    """Tests for JavaScript eval() detection."""
+
+    def test_detect_eval(self):
+        """Test detection of eval()."""
+        source = 'const result = eval(userInput);'
+        context = create_js_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        assert len(annotations) == 1
+        assert annotations[0].rule == "js_eval"
+        assert annotations[0].severity == Severity.HIGH
+
+    def test_detect_function_constructor(self):
+        """Test detection of Function() when called directly."""
+        source = 'const fn = Function(userCode);'
+        context = create_js_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        assert len(annotations) == 1
+        assert annotations[0].rule == "js_eval"
+
+    def test_no_flag_safe_code(self):
+        """Test that safe code is not flagged."""
+        source = 'const data = JSON.parse(jsonString);'
+        context = create_js_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        assert len(annotations) == 0
+
+
+class TestJsInnerHtml:
+    """Tests for innerHTML/outerHTML detection."""
+
+    def test_detect_innerhtml(self):
+        """Test detection of innerHTML assignment."""
+        source = 'element.innerHTML = userContent;'
+        context = create_js_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        assert len(annotations) == 1
+        assert annotations[0].rule == "js_innerhtml"
+
+    def test_detect_outerhtml(self):
+        """Test detection of outerHTML assignment."""
+        source = 'element.outerHTML = content;'
+        context = create_js_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        assert len(annotations) == 1
+        assert annotations[0].rule == "js_innerhtml"
+
+    def test_no_flag_textcontent(self):
+        """Test that textContent is not flagged."""
+        source = 'element.textContent = userContent;'
+        context = create_js_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        assert len(annotations) == 0
+
+
+class TestJsDocumentWrite:
+    """Tests for document.write() detection."""
+
+    def test_detect_document_write(self):
+        """Test detection of document.write()."""
+        source = 'document.write(content);'
+        context = create_js_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        assert len(annotations) == 1
+        assert annotations[0].rule == "js_document_write"
+
+    def test_detect_document_writeln(self):
+        """Test detection of document.writeln()."""
+        source = 'document.writeln(content);'
+        context = create_js_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        assert len(annotations) == 1
+        assert annotations[0].rule == "js_document_write"
+
+
+# ========== Go-specific tests ==========
+
+def create_go_context(source: str, changed_lines: list[int] | None = None, filename: str = "test.go") -> AnalysisContext:
+    """Create a test context for Go files."""
+    source_lines = source.split("\n")
+    
+    if changed_lines is None:
+        changed_lines = list(range(1, len(source_lines) + 1))
+    
+    lines = []
+    for i, content in enumerate(source_lines):
+        line_num = i + 1
+        if line_num in changed_lines:
+            lines.append(
+                DiffLine(kind=DiffLineKind.ADD, content=content, old_line=None, new_line=line_num)
+            )
+        else:
+            lines.append(
+                DiffLine(kind=DiffLineKind.CONTEXT, content=content, old_line=line_num, new_line=line_num)
+            )
+
+    hunk = DiffHunk(
+        old_start=1,
+        old_count=len(source_lines),
+        new_start=1,
+        new_count=len(source_lines),
+        lines=tuple(lines),
+        header="@@",
+    )
+    file_diff = FileDiff(old_path=filename, new_path=filename, hunks=(hunk,))
+    diff = ParsedDiff(files=(file_diff,))
+
+    analyzer = GoAnalyzer()
+    ast = analyzer.parse_source(source, filename)
+
+    return AnalysisContext(
+        diff=diff,
+        files={filename: ast},
+        config=LensConfig(),
+    )
+
+
+class TestGoSqlInjection:
+    """Tests for Go SQL injection detection."""
+
+    def test_detect_sprintf_sql(self):
+        """Test detection of fmt.Sprintf with SQL."""
+        source = 'query := fmt.Sprintf("SELECT * FROM users WHERE id = %d", userId)'
+        context = create_go_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        assert len(annotations) == 1
+        assert annotations[0].rule == "go_sql_injection"
+
+    def test_no_flag_safe_sprintf(self):
+        """Test that non-SQL Sprintf is not flagged."""
+        source = 'msg := fmt.Sprintf("Hello, %s!", name)'
+        context = create_go_context(source)
+        lens = SecurityLens()
+        annotations = lens.analyze(context)
+
+        assert len(annotations) == 0
