@@ -32,6 +32,7 @@ class AnalysisEngine:
         config: Config,
         verbose: bool = False,
         quiet: bool = False,
+        custom_lenses: list[Lens] | None = None,
     ) -> None:
         """Initialize the analysis engine.
 
@@ -39,12 +40,14 @@ class AnalysisEngine:
             config: Application configuration.
             verbose: Enable verbose output.
             quiet: Suppress progress output.
+            custom_lenses: List of custom lens instances to include.
         """
         self.config = config
         self.verbose = verbose
         self.quiet = quiet
         self._python_analyzer = PythonAnalyzer()
         self._suppressions: dict[str, list[Suppression]] = {}
+        self._custom_lenses = custom_lenses or []
 
     def analyze(self, target: str) -> AnalysisResult:
         """Analyze a target (diff file or directory).
@@ -570,12 +573,18 @@ class AnalysisEngine:
         """
         lenses: list[Lens] = []
 
+        # Built-in lenses from registry
         for lens_class in LensRegistry.all():
             lens = lens_class()
             if self.config.is_lens_enabled(lens.name):
                 # Configure the lens
                 lens_config = self.config.get_lens_config(lens.name)
                 lens.configure(lens_config.rules)
+                lenses.append(lens)
+
+        # Custom user-defined lenses
+        for lens in self._custom_lenses:
+            if self.config.is_lens_enabled(lens.name):
                 lenses.append(lens)
 
         return lenses

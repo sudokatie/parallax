@@ -3,7 +3,7 @@
 import click
 
 from parallax import __version__
-from parallax.cli.commands import analyze, init, list_lenses
+from parallax.cli.commands import analyze, create_lens, init, list_lenses
 
 
 @click.group()
@@ -21,6 +21,7 @@ def cli() -> None:
 cli.add_command(analyze)
 cli.add_command(list_lenses, name="lenses")
 cli.add_command(init)
+cli.add_command(create_lens, name="create-lens")
 
 
 def _import_lenses() -> None:

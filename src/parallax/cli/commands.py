@@ -113,6 +113,17 @@ def _import_lenses() -> None:
 )
 @click.option("-v", "--verbose", is_flag=True, help="Verbose output.")
 @click.option("-q", "--quiet", is_flag=True, help="Suppress progress output.")
+@click.option(
+    "--custom-lenses",
+    is_flag=True,
+    help="Include user-defined custom lenses from ~/.config/parallax/lenses/.",
+)
+@click.option(
+    "--lens-dir",
+    type=click.Path(exists=True),
+    multiple=True,
+    help="Additional directory to load custom lenses from (repeatable).",
+)
 def analyze(
     target: str | None,
     pr_url: str | None,
@@ -129,6 +140,8 @@ def analyze(
     no_suggestions: bool,
     verbose: bool,
     quiet: bool,
+    custom_lenses: bool,
+    lens_dir: tuple[str, ...],
 ) -> None:
     """Analyze a diff/directory and output findings.
 
@@ -161,8 +174,22 @@ def analyze(
         }
         config = merge_cli_args(config, **cli_args)
 
+        # Load custom lenses if requested
+        custom_lens_list = []
+        if custom_lenses or lens_dir:
+            from parallax.lenses.custom import CustomLensLoader
+
+            extra_dirs = [Path(d) for d in lens_dir] if lens_dir else None
+            loader = CustomLensLoader(extra_dirs=extra_dirs)
+            custom_lens_list = loader.load_all()
+
+            if verbose and custom_lens_list:
+                click.echo(f"Loaded {len(custom_lens_list)} custom lens(es)")
+
         # Create engine and run analysis
-        engine = AnalysisEngine(config, verbose=verbose, quiet=quiet)
+        engine = AnalysisEngine(
+            config, verbose=verbose, quiet=quiet, custom_lenses=custom_lens_list
+        )
 
         # Determine analysis mode
         if pr_url:
@@ -217,15 +244,83 @@ def analyze(
 
 
 @click.command("lenses")
-def list_lenses() -> None:
+@click.option(
+    "--custom",
+    is_flag=True,
+    help="Also list custom user-defined lenses.",
+)
+def list_lenses(custom: bool) -> None:
     """List available lenses."""
     _import_lenses()
 
-    click.echo("Available lenses:\n")
+    click.echo("Built-in lenses:\n")
     for lens_class in LensRegistry.all():
         lens = lens_class()
         click.echo(f"  {lens.name}")
         click.echo(f"    {lens.description}\n")
+
+    if custom:
+        from parallax.lenses.custom import CustomLensLoader
+
+        loader = CustomLensLoader()
+        custom_lenses = loader.load_all()
+
+        if custom_lenses:
+            click.echo("Custom lenses:\n")
+            for lens in custom_lenses:
+                click.echo(f"  {lens.name}")
+                click.echo(f"    {lens.description}\n")
+        else:
+            click.echo("No custom lenses found.\n")
+            click.echo("Create custom lenses in ~/.config/parallax/lenses/")
+            click.echo("Use 'parallax create-lens' to generate an example.")
+
+
+@click.command("create-lens")
+@click.argument("name", required=False, default="my-lens")
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    default=None,
+    help="Output file path (default: ~/.config/parallax/lenses/<name>.yaml).",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Overwrite existing file.",
+)
+def create_lens(name: str, output: str | None, force: bool) -> None:
+    """Create a custom lens template.
+
+    Generates an example custom lens definition file that can be
+    customized with your own rules.
+    """
+    from parallax.lenses.custom import create_example_lens
+
+    # Determine output path
+    if output:
+        output_path = Path(output)
+    else:
+        lens_dir = Path.home() / ".config" / "parallax" / "lenses"
+        lens_dir.mkdir(parents=True, exist_ok=True)
+        output_path = lens_dir / f"{name}.yaml"
+
+    if output_path.exists() and not force:
+        click.echo(f"File already exists: {output_path}", err=True)
+        click.echo("Use --force to overwrite.", err=True)
+        sys.exit(1)
+
+    # Generate and customize the example
+    example = create_example_lens()
+    if name != "my-company":
+        example = example.replace("name: my-company", f"name: {name}")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(example)
+    click.echo(f"Created custom lens template: {output_path}")
+    click.echo("\nEdit the file to add your own rules, then use:")
+    click.echo("  parallax analyze <target> --custom-lenses")
 
 
 @click.command()
